@@ -123,37 +123,8 @@ class OfflineSolver:
         
         """
 
-        # Revenue from each served request.
-        total_revenue = gp.quicksum(
-            f_i.fare * self.Z_var[f_i.id]
-            for f_i in P
-        )
-
-        # Driving cost while serving a request (origin -> destination).
-        in_trip_cost = gp.quicksum(
-            self.costs[f_i.origin.label][f_i.destination.label] * self.Z_var[f_i.id]
-            for f_i in P
-        )
-
-        # Empty travel cost for the first assigned request of each vehicle.
-        start_to_first_cost = gp.quicksum(
-            self.costs[vehicle_request_assign[f_k.id].departure_stop][f_i.origin.label] * self.Y_var[f_k.id, f_i.id]
-            for f_k in K
-            for f_i in P
-        )
-
-        # Empty travel cost between consecutive served requests i -> j.
-        inter_request_cost = gp.quicksum(
-            self.costs[f_i.destination.label][f_j.origin.label] * self.X_var[f_i.id, f_j.id]
-            for f_i in P
-            for f_j in P
-            if f_i != f_j
-        )
-
-        self.model.setObjective(
-            total_revenue - in_trip_cost - start_to_first_cost - inter_request_cost,
-            sense=GRB.MAXIMIZE
-        )
+        """you should write your objective here ..."""
+        raise NotImplementedError("OfflineSolver.define_total_profit_objective() not implemented")
 
 
     def define_total_wait_time_objective(self, P):
@@ -171,22 +142,8 @@ class OfflineSolver:
 
         """
 
-        # Served-request wait: pickup time minus request ready time.
-        served_wait_time = gp.quicksum(
-            (self.U_var[f_i.id] - f_i.ready_time) / 60.0
-            for f_i in P
-        )
-
-        # Rejected-request penalty: full pickup time window.
-        rejected_wait_penalty = gp.quicksum(
-            ((f_i.latest_pickup - f_i.ready_time) / 60.0) * (1 - self.Z_var[f_i.id])
-            for f_i in P
-        )
-
-        self.model.setObjective(
-            served_wait_time + rejected_wait_penalty,
-            sense=GRB.MINIMIZE
-        )
+        """you should write your objective here ..."""
+        raise NotImplementedError("OfflineSolver.define_total_wait_time_objective() not implemented")
 
     def define_multi_objective(self, K, P, vehicle_request_assign):
         """
@@ -372,3 +329,4 @@ class OfflineSolver:
         self.define_objective(K, P, vehicle_request_assign)
         self.solve()
         self.extract_solution(K, P, rejected_trips, vehicle_request_assign)
+

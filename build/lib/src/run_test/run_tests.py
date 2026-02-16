@@ -2,6 +2,7 @@ import itertools
 import os
 import logging
 from typing import Any, Dict, List
+import pandas as pd
 from src.utilities.enums import (Algorithm,Objectives,SolutionMode,DestroyMethod,ConsensusParams)
 from src.simulation.run_simulation import run_taxi_simulation
 from src.utilities.config import SimulationConfig
@@ -97,28 +98,22 @@ def run_scenarios(part: str, SCENARIOS: Dict[str, Dict[str, Any]]):
             logging.error(f"Error running simulation for {part} - Instance: {instance} - Error: {e}")
             continue
 
-    try:
-        import pandas as pd
-    except ImportError:
-        pd = None
-        logging.warning("pandas is not installed. Skipping CSV export and markdown summary table.")
+    # Save results to CSV
+    df = pd.DataFrame(results)
+    csv_file_path = os.path.join(RESULTS_FOLDER, f"{part}_simulation_results.csv")
+    df.to_csv(csv_file_path, index=False)
+    logging.info(f"Results for '{part}' saved to {csv_file_path}.")
 
-    if pd is not None:
-        # Save results to CSV
-        df = pd.DataFrame(results)
-        csv_file_path = os.path.join(RESULTS_FOLDER, f"{part}_simulation_results.csv")
-        df.to_csv(csv_file_path, index=False)
-        logging.info(f"Results for '{part}' saved to {csv_file_path}.")
-
-        # Print summary table
-        cols_to_print = [
-            "Test", "# Trips", "# Vehicles", "Solution Mode",
-            "Time window (min)", "weight", "Algorithm", "Objective type",
-            "Objective value", "% of Service", "runtime (s)"
-        ]
-        with pd.option_context('display.colheader_justify', 'center'):
-            # to_markdown will print headers on top, values below
-            print(df[cols_to_print].to_markdown(tablefmt="pipe", index=False))
+    # Print results
+    # Print results
+    cols_to_print = [
+        "Test", "# Trips", "# Vehicles", "Solution Mode",
+        "Time window (min)", "weight", "Algorithm", "Objective type",
+        "Objective value", "% of Service", "runtime (s)"
+    ]
+    with pd.option_context('display.colheader_justify', 'center'):
+        # to_markdown will print headers on top, values below
+        print(df[cols_to_print].to_markdown(tablefmt="pipe", index=False))
 
 def generate_combinations(params: Dict[str, Any]) -> List[Dict[str, Any]]:
     """Generates all parameter combinations for scenarios."""
@@ -198,3 +193,4 @@ def create_simulation_config(comb: Dict[str, Any]) -> SimulationConfig:
     config.algorithm_params["weight"] = comb.get("weight", 1)
 
     return config
+
