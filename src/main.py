@@ -29,9 +29,6 @@ def main():
         config_data = json.load(file)
 
     task_type = config_data.get("task_type")
-    print(f"Task type: {task_type}")
-
-    print(f"Scenario argument: {args.scenario}")
 
     if task_type == "scenarios":
         SCENARIOS = {scenario["scenario"]: scenario["parameters"] for scenario in config_data.get("scenarios", [])}
