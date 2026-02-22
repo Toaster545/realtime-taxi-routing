@@ -49,6 +49,7 @@ class OfflineSolver:
             Used only for MULTI_OBJECTIVE objective (ignored otherwise). Default 0.5.
         """
         self.objective = objective
+        self.weight = weight
 
         self.objective_value = 0
         self.durations = get_durations(network)
@@ -155,6 +156,8 @@ class OfflineSolver:
             sense=GRB.MAXIMIZE
         )
 
+        return total_revenue - in_trip_cost - start_to_first_cost - inter_request_cost
+
 
     def define_total_wait_time_objective(self, P):
         """
@@ -188,6 +191,8 @@ class OfflineSolver:
             sense=GRB.MINIMIZE
         )
 
+        return served_wait_time + rejected_wait_penalty
+
     def define_multi_objective(self, K, P, vehicle_request_assign):
         """
         Define weighted combined objective: maximize total profit and minimize wait time.
@@ -210,8 +215,16 @@ class OfflineSolver:
 
         """
 
-        """you should write your objective here ..."""
-        raise NotImplementedError("OfflineSolver.define_multi_objective() not implemented")
+        w = self.weight
+
+        profit_objective = self.define_total_profit_objective(K, P, vehicle_request_assign)
+        wait_time_objective = self.define_total_wait_time_objective(P)
+
+        self.model.setObjective(
+            w * profit_objective - (1 - w) * wait_time_objective,
+            sense=GRB.MAXIMIZE
+        )
+        
 
 
     def create_model(self, K, P, vehicle_request_assign):
