@@ -49,7 +49,7 @@ class OfflineSolver:
             Used only for MULTI_OBJECTIVE objective (ignored otherwise). Default 0.5.
         """
         self.objective = objective
-        self.weight = weight
+        self.weight = weight #Added this for the multi-objective
 
         self.objective_value = 0
         self.durations = get_durations(network)
@@ -215,13 +215,13 @@ class OfflineSolver:
 
         """
 
-        w = self.weight
-
+        # Get objective components
         profit_objective = self.define_total_profit_objective(K, P, vehicle_request_assign)
         wait_time_objective = self.define_total_wait_time_objective(P)
 
+        # Set weighted objective
         self.model.setObjective(
-            w * profit_objective - (1 - w) * wait_time_objective,
+            self.weight * profit_objective - (1 - self.weight) * wait_time_objective,
             sense=GRB.MAXIMIZE
         )
         
