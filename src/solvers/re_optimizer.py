@@ -136,7 +136,7 @@ class ReOptimizer(Solver):
             offline_model : OfflineSolver instance (Gurobi MIP model).
 
         """
-        WINDOW = 120  # ±2 minutes in seconds
+        WINDOW = 120  # +-2 minutes
         U_prev = self.initial_solution['U']
         for f_i in P:
             if f_i.id in U_prev:
@@ -162,7 +162,7 @@ class ReOptimizer(Solver):
             - Forbid the arcs that goes from departing node of a vehicle to other requests that were in different
                   vehicle
         """
-        # Build trip -> vehicle mapping from previous solution
+        #build trip -> vehicle mapping from previous solution
         trip_vehicle = {}
         for vehicle_id, data in self.initial_solution['assignment_dict'].items():
             for trip in data['assigned_requests']:
