@@ -388,12 +388,37 @@ class Solver:
             value = sum(1 for f_i in P if self.Z[f_i.id])
 
         elif self.objective == Objectives.TOTAL_PROFIT:
-            """you should write your code here ..."""
-        elif self.objective == Objectives.WAIT_TIME:
-            """you should write your code here ..."""
-        elif self.objective == Objectives.MULTI_OBJECTIVE:
-            """you should write your code here ..."""
+            # Revenue from served customers
+            revenue = sum(f_i.fare for f_i in P if self.Z[f_i.id])
+            # Subtract empty driving costs (depot to first pickup + between consecutive trips)
+            cost = 0
+            for veh_id, state in self.vehicle_request_assign.items():
+                reqs = state.assigned_requests
+                if not reqs:
+                    continue
+                cost += self.costs[state.departure_stop][reqs[0].origin.label]
+                for i in range(len(reqs) - 1):
+                    cost += self.costs[reqs[i].destination.label][reqs[i + 1].origin.label]
+            value = revenue - cost
 
+        elif self.objective == Objectives.WAIT_TIME:
+            # Total wait time (pickup time - ready time) for served customers
+            value = sum(self.U[f_i.id] - f_i.ready_time for f_i in P if self.Z[f_i.id])
+
+        elif self.objective == Objectives.MULTI_OBJECTIVE:
+            # Weighted sum of profit and negative wait time
+            revenue = sum(f_i.fare for f_i in P if self.Z[f_i.id])
+            cost = 0
+            for veh_id, state in self.vehicle_request_assign.items():
+                reqs = state.assigned_requests
+                if not reqs:
+                    continue
+                cost += self.costs[state.departure_stop][reqs[0].origin.label]
+                for i in range(len(reqs) - 1):
+                    cost += self.costs[reqs[i].destination.label][reqs[i + 1].origin.label]
+            profit = revenue - cost
+            wait = sum(self.U[f_i.id] - f_i.ready_time for f_i in P if self.Z[f_i.id])
+            value = profit - wait
         self.objective_value = value
 
 

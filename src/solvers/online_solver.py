@@ -70,7 +70,9 @@ class OnlineSolver(Solver):
             - Use the parent class method calc_reach_time(veh_info, trip).
         """
         """you should write your code here ..."""
-
+        for veh_id, state in self.vehicle_request_assign.items():
+            reach_time = self.calc_reach_time(state, trip)
+            state.assign_possible = (reach_time <= trip.latest_pickup)
 
     def online_solver(self, K, P_not_assigned, rejected_trips):
         """Find a solution to assign ride requests to vehicles after arrival.
@@ -135,7 +137,27 @@ class OnlineSolver(Solver):
         """
             Implement your greedy algorithm here:
         """
+        for trip in P_not_assigned:
+            self.determine_available_vehicles(trip)
+            available = [(veh_id, state) for veh_id, state in self.vehicle_request_assign.items()
+                        if state.assign_possible]
+            if not available:
+                rejected_trips.append(trip)
+                continue
 
+            best_state = None
+            best_score = None
+            for veh_id, state in available:
+                reach_time = self.calc_reach_time(state, trip)
+                # Greedy: pick vehicle that minimizes empty travel time to pickup
+                empty_time = reach_time - state.last_stop_time
+                score = -empty_time  # negative because we maximize score
+                if best_score is None or score > best_score:
+                    best_score = score
+                    best_state = state
+
+            self.assign_trip_to_vehicle(best_state, trip)
+            assigned_requests.append(trip)
         return assigned_requests
 
     def random_assign(self, P_not_assigned: List[Any], rejected_trips: List[Any]) -> List[Any]:
@@ -163,7 +185,17 @@ class OnlineSolver(Solver):
         """
             Implement your random algorithm here:
         """
+        for trip in P_not_assigned:
+            self.determine_available_vehicles(trip)
+            available = [state for veh_id, state in self.vehicle_request_assign.items()
+                        if state.assign_possible]
+            if not available:
+                rejected_trips.append(trip)
+                continue
 
+            chosen_state = random.choice(available)
+            self.assign_trip_to_vehicle(chosen_state, trip)
+            assigned_requests.append(trip)
         return assigned_requests
 
     def ranking_assign(self, P_not_assigned: List[Any], rejected_trips: List[Any]) -> List[Any]:
@@ -192,5 +224,16 @@ class OnlineSolver(Solver):
         """
             Implement your ranking algorithm here:
         """
+        for trip in P_not_assigned:
+            self.determine_available_vehicles(trip)
+            available = [state for veh_id, state in self.vehicle_request_assign.items()
+                        if state.assign_possible]
+            if not available:
+                rejected_trips.append(trip)
+                continue
 
+            # Pick the vehicle with the highest pre-assigned random ranking number
+            best_state = max(available, key=lambda s: s.random_number)
+            self.assign_trip_to_vehicle(best_state, trip)
+            assigned_requests.append(trip)
         return assigned_requests

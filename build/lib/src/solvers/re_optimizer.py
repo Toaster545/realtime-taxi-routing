@@ -136,7 +136,17 @@ class ReOptimizer(Solver):
             offline_model : OfflineSolver instance (Gurobi MIP model).
 
         """
-        """you should write your code here ..."""
+        WINDOW = 120  # ±2 minutes in seconds
+        U_prev = self.initial_solution['U']
+        for f_i in P:
+            if f_i.id in U_prev:
+                u_val = U_prev[f_i.id]
+                lb = max(f_i.ready_time, u_val - WINDOW)
+                ub = min(f_i.latest_pickup, u_val + WINDOW)
+                offline_model.U_var[f_i.id].LB = lb
+                offline_model.U_var[f_i.id].UB = ub
+        offline_model.model.update()
+
 
     def destroy_fix_variables(self, K, P, offline_model: OfflineSolver):
         """ Fix some of Y_var, X_var variables based on the initial solution.
@@ -152,21 +162,69 @@ class ReOptimizer(Solver):
             - Forbid the arcs that goes from departing node of a vehicle to other requests that were in different
                   vehicle
         """
-        """you should write your code here ..."""
+        # Build trip -> vehicle mapping from previous solution
+        trip_vehicle = {}
+        for vehicle_id, data in self.initial_solution['assignment_dict'].items():
+            for trip in data['assigned_requests']:
+                trip_vehicle[trip.id] = vehicle_id
+
+        # Forbid Y[k, i] when trip i was previously served by a different vehicle
+        for f_k in K:
+            for f_i in P:
+                if f_i.id in trip_vehicle and trip_vehicle[f_i.id] != f_k.id:
+                    offline_model.Y_var[f_k.id, f_i.id].UB = 0
+
+        # Forbid X[i, j] when trips i and j were previously in different vehicles
+        for f_i in P:
+            for f_j in P:
+                if f_i != f_j:
+                    v_i = trip_vehicle.get(f_i.id)
+                    v_j = trip_vehicle.get(f_j.id)
+                    if v_i is not None and v_j is not None and v_i != v_j:
+                        offline_model.X_var[f_i.id, f_j.id].UB = 0
+
+        offline_model.model.update()
 
 
     def destroy_bonus(self, K, P, offline_model: OfflineSolver):
-        """Custom destroy method
+        """Custom destroy method: fix well-served trips, free poorly-served ones.
+
+        Trips with low wait time in the previous solution are "well-served" and their
+        vehicle assignments are fixed. Trips with high wait time are freed so the
+        solver can find better placements for them.
 
         Input:
         ------------
             K : set of vehicles
             P : set of customers to serve
             offline_model : OfflineSolver instance (Gurobi model).
-
-        Hint:
-            - Include comments where necessary to explain your proposed function
-            - you can use any of the inputs if required
         """
-        """you should write your code here ..."""
+        U_prev = self.initial_solution['U']
+        Z_prev = self.initial_solution['Z']
+
+        served_trips = [f for f in P if f.id in Z_prev and Z_prev[f.id] > 0.5]
+        served_trips.sort(key=lambda f: U_prev.get(f.id, f.ready_time) - f.ready_time)
+
+        fix_set = {f.id for f in served_trips[: len(served_trips) // 2]}
+
+        trip_vehicle = {}
+        for vehicle_id, data in self.initial_solution['assignment_dict'].items():
+            for trip in data['assigned_requests']:
+                trip_vehicle[trip.id] = vehicle_id
+
+        for f_k in K:
+            for f_i in P:
+                if f_i.id in fix_set and trip_vehicle.get(f_i.id) != f_k.id:
+                    offline_model.Y_var[f_k.id, f_i.id].UB = 0
+
+        for f_i in P:
+            for f_j in P:
+                if f_i != f_j:
+                    i_fixed = f_i.id in fix_set
+                    j_fixed = f_j.id in fix_set
+                    if i_fixed or j_fixed:
+                        if trip_vehicle.get(f_i.id) != trip_vehicle.get(f_j.id):
+                            offline_model.X_var[f_i.id, f_j.id].UB = 0
+
+        offline_model.model.update()
 
